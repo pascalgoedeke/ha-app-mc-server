@@ -1,0 +1,81 @@
+#!/command/with-contenv bashio
+
+bashio::log.info "Initializing Minecraft Paper Server..."
+
+if ! bashio::config.true 'accept_eula'; then
+    bashio::log.fatal "You must accept the EULA to run this add-on. Set 'accept_eula: true' in the configuration."
+    exit 1
+fi
+
+WORKDIR="/data"
+mkdir -p "${WORKDIR}"
+cd "${WORKDIR}" || exit 1
+
+SERVER_VERSION=$(bashio::config 'server_version')
+
+# Dynamically resolve latest server version if requested
+if [ "${SERVER_VERSION}" = "latest" ]; then
+    bashio::log.info "Requesting latest PaperMC version..."
+    SERVER_VERSION=$(curl -s "https://api.papermc.io/v2/projects/paper" | jq -r '.versions[-1]')
+    bashio::log.info "Resolved to: ${SERVER_VERSION}"
+fi
+
+# Fetch the absolute latest build number for the specified version 
+LATEST_BUILD=$(curl -s "https://api.papermc.io/v2/projects/paper/versions/${SERVER_VERSION}" | jq -r '.builds[-1]')
+
+if [ "${LATEST_BUILD}" = "null" ]; then
+    bashio::log.fatal "Could not find a valid build for Minecraft version ${SERVER_VERSION}."
+    exit 1
+fi
+
+JAR_NAME="paper-${SERVER_VERSION}-${LATEST_BUILD}.jar"
+JAR_PATH="${WORKDIR}/${JAR_NAME}"
+
+# Download only if the specific build doesn't exist
+if [ ! -f "${JAR_PATH}" ]; then
+    bashio::log.info "Downloading PaperMC ${JAR_NAME}..."
+    curl -sS -o "${JAR_PATH}" "https://api.papermc.io/v2/projects/paper/versions/${SERVER_VERSION}/builds/${LATEST_BUILD}/downloads/${JAR_NAME}"
+    
+    bashio::log.info "Cleaning up older Paper JARs to save persistent storage space..."
+    find "${WORKDIR}" -maxdepth 1 -name "paper-*.jar" -type f -not -name "${JAR_NAME}" -delete
+fi
+
+# Symlink the actual jar to paper.jar for the run script
+ln -sf "${JAR_PATH}" "${WORKDIR}/paper.jar"
+
+# Write EULA acceptance physically to disk
+echo "eula=true" > "${WORKDIR}/eula.txt"
+
+# Ensure server.properties exists and mutate it with our configuration options
+PROPERTIES="${WORKDIR}/server.properties"
+touch "${PROPERTIES}"
+
+set_property() {
+    local key="$1"
+    local value="$2"
+    if grep -q "^${key}=" "${PROPERTIES}"; then
+        sed -i "s|^${key}=.*|${key}=${value}|" "${PROPERTIES}"
+    else
+        echo "${key}=${value}" >> "${PROPERTIES}"
+    fi
+}
+
+MOTD=$(bashio::config 'motd')
+RCON_PASSWORD=$(bashio::config 'rcon_password')
+
+bashio::log.info "Updating server.properties with add-on configuration..."
+set_property "enable-rcon" "true"
+set_property "rcon.password" "${RCON_PASSWORD}"
+set_property "rcon.port" "25575"
+set_property "server-port" "25565"
+set_property "motd" "${MOTD}"
+
+# Create RCON CLI configuration for internal usage by our shutdown script
+mkdir -p /etc/rcon
+cat <<EOF > /etc/rcon/rcon.yaml
+host: 127.0.0.1
+port: 25575
+password: "${RCON_PASSWORD}"
+EOF
+
+bashio::log.info "Initialization logic completed."

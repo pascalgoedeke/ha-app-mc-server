@@ -1,0 +1,45 @@
+#!/command/with-contenv bashio
+
+WORKDIR="/data"
+cd "${WORKDIR}" || exit 1
+
+MEMORY_MIN=$(bashio::config 'memory_min')
+MEMORY_MAX=$(bashio::config 'memory_max')
+
+bashio::log.info "Starting Minecraft Paper Server (Min RAM: ${MEMORY_MIN}, Max RAM: ${MEMORY_MAX})..."
+
+# Trap SIGTERM (sent by s6 overlay on Add-on Stop)
+trap 'bashio::log.info "Shutdown signal received! Saving and stopping server..."; \
+      rcon-cli --config /etc/rcon/rcon.yaml "save-all"; \
+      rcon-cli --config /etc/rcon/rcon.yaml "stop"; \
+      wait $JAVA_PID; \
+      bashio::log.info "Graceful shutdown complete. Container will now exit."' SIGTERM SIGINT
+
+# Start Java in the background with Aikar's optimized flags for modern hardware
+java -Xms"${MEMORY_MIN}" -Xmx"${MEMORY_MAX}" \
+     -XX:+UseG1GC \
+     -XX:+ParallelRefProcEnabled \
+     -XX:MaxGCPauseMillis=200 \
+     -XX:+UnlockExperimentalVMOptions \
+     -XX:+DisableExplicitGC \
+     -XX:+AlwaysPreTouch \
+     -XX:G1NewSizePercent=30 \
+     -XX:G1MaxNewSizePercent=40 \
+     -XX:G1HeapRegionSize=8M \
+     -XX:G1ReservePercent=20 \
+     -XX:G1HeapWastePercent=5 \
+     -XX:G1MixedGCCountTarget=4 \
+     -XX:InitiatingHeapOccupancyPercent=15 \
+     -XX:G1MixedGCLiveThresholdPercent=90 \
+     -XX:G1RSetUpdatingPauseTimePercent=5 \
+     -XX:SurvivorRatio=32 \
+     -XX:+PerfDisableSharedMem \
+     -XX:MaxTenuringThreshold=1 \
+     -Dusing.aikars.flags=https://mcflags.emc.gs \
+     -Daikars.new.flags=true \
+     -jar paper.jar nogui &
+
+JAVA_PID=$!
+
+# Wait for the java process directly
+wait $JAVA_PID
