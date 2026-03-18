@@ -27,5 +27,11 @@ RUN \
 # Copy root filesystem (s6-overlay structure)
 COPY rootfs /
 
+# Ensure scripts are executable (critical for Windows environments)
+RUN chmod a+x /etc/s6-overlay/s6-rc.d/*/up \
+    && chmod a+x /etc/s6-overlay/s6-rc.d/*/run \
+    && chmod a+x /etc/s6-overlay/s6-rc.d/init-minecraft/up \
+    && chmod a+x /etc/s6-overlay/s6-rc.d/minecraft/run || true
+
 # Set the working directory where our persistent data will mount
 WORKDIR /data
