@@ -1,4 +1,4 @@
-ARG BUILD_FROM=ghcr.io/hassio-addons/base:16.3.3
+ARG BUILD_FROM=ghcr.io/hassio-addons/base:20.0.1
 FROM $BUILD_FROM
 
 # Set shell
@@ -10,6 +10,7 @@ ARG BUILD_ARCH
 RUN \
     echo "Installing dependencies..." \
     && apk add --no-cache \
+        coreutils=9.8-r1 \
         openjdk21-jre-headless \
         curl \
         jq \
@@ -21,7 +22,7 @@ RUN \
        else \
          RCON_ARCH="amd64"; \
        fi \
-    && curl -sL "https://github.com/itzg/rcon-cli/releases/download/1.6.9/rcon-cli_1.6.9_linux_${RCON_ARCH}.tar.gz" | tar xz -C /usr/local/bin rcon-cli \
+    && curl -sL "https://github.com/itzg/rcon-cli/releases/download/1.7.4/rcon-cli_1.7.4_linux_${RCON_ARCH}.tar.gz" | tar xz -C /usr/local/bin rcon-cli \
     && chmod +x /usr/local/bin/rcon-cli
 
 # Copy root filesystem (s6-overlay structure)
