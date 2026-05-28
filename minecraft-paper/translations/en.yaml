@@ -1,10 +1,35 @@
 ---
 configuration:
-  log_level:
-    name: Log level
-    description: The amount of logging the app should do.
-  seconds_between_quotes:
-    name: Seconds between quotes
-    description: >-
-      The number of seconds the app waits until showing a new quote in the
-      app log.
+  accept_eula:
+    name: Accept Minecraft EULA
+    description: Must be enabled to start the Minecraft server.
+  server_version:
+    name: Minecraft version
+    description: Minecraft version to run, or "latest" for newest supported.
+  auto_update:
+    name: Auto update Paper build
+    description: Automatically install the latest Paper build for the selected version on startup.
+  memory_min:
+    name: Minimum memory
+    description: Minimum Java heap size, for example 2G.
+  memory_max:
+    name: Maximum memory
+    description: Maximum Java heap size, for example 4G.
+  motd:
+    name: Server MOTD
+    description: Message shown in the server list.
+  online_mode:
+    name: Online mode
+    description: Only allow authenticated Mojang/Microsoft accounts.
+  enforce_whitelist:
+    name: Enforce whitelist
+    description: Restrict joins to whitelisted players only.
+  max_players:
+    name: Max players
+    description: Maximum number of players that can join simultaneously.
+  expose_rcon:
+    name: Expose RCON externally
+    description: Bind RCON to all interfaces (0.0.0.0) instead of localhost only.
+  rcon_password:
+    name: RCON password
+    description: Password used by RCON for automation and remote console access.
