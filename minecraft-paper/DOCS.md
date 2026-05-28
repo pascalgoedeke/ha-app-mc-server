@@ -40,6 +40,7 @@ This add-on configures RCON for internal lifecycle management (save-all + gracef
 You can send chat messages, change the weather, or execute system console commands directly from your Automations via Home Assistant's built-in RCON integration.
 
 First, set up the YAML integration in your base `configuration.yaml` in HA:
+
 ```yaml
 rcon:
   - host: localhost
@@ -48,6 +49,7 @@ rcon:
 ```
 
 Restart Home Assistant. You can now call a service from any Automation in your house!
+
 ```yaml
 alias: Minecraft - Announce Arrival
 trigger:
@@ -61,4 +63,5 @@ action:
 ```
 
 ## Data Persistence & Backup
+
 All worlds, plugins, and properties are safely isolated inside `/data`. This makes it fully compatible with Home Assistant's built-in full and partial backup systems.

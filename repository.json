@@ -1,5 +1,5 @@
 {
-    "name": "Minecraft Paper Server Home Assistant App",
-    "url": "https://github.com/pascalgoedeke/ha-app-mc-server",
-    "maintainer": "Name <mail@example.com>"
+  "name": "Minecraft Paper Server Home Assistant App",
+  "url": "https://github.com/pascalgoedeke/ha-app-mc-server",
+  "maintainer": "Name <mail@example.com>"
 }
