@@ -17,7 +17,7 @@ trap 'bashio::log.info "Shutdown signal received! Saving and stopping server..."
       bashio::log.info "Graceful shutdown complete. Container will now exit."' SIGTERM SIGINT
 
 # Start Java in the background with Aikar's optimized flags for modern hardware
-java -Xms"${MEMORY_MIN}" -Xmx"${MEMORY_MAX}" \
+s6-setuidgid minecraft java -Xms"${MEMORY_MIN}" -Xmx"${MEMORY_MAX}" \
      -XX:+UseG1GC \
      -XX:+ParallelRefProcEnabled \
      -XX:MaxGCPauseMillis=200 \

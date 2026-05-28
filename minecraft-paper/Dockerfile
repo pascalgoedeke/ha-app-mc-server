@@ -25,6 +25,10 @@ RUN \
     && curl -sL "https://github.com/itzg/rcon-cli/releases/download/1.7.4/rcon-cli_1.7.4_linux_${RCON_ARCH}.tar.gz" | tar xz -C /usr/local/bin rcon-cli \
     && chmod +x /usr/local/bin/rcon-cli
 
+# Create an unprivileged runtime user for Minecraft
+RUN addgroup -S minecraft \
+    && adduser -S -D -G minecraft -h /data minecraft
+
 # Copy root filesystem (s6-overlay structure)
 COPY rootfs /
 

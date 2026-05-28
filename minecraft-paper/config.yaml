@@ -1,3 +1,4 @@
+---
 name: "Minecraft Paper Server"
 description: "A highly performant, production-ready Minecraft server using PaperMC."
 version: 1.0.0
@@ -15,21 +16,31 @@ map:
   - addons_config:rw
 ports:
   25565/tcp: 25565
-  25575/tcp: 25575
+  25575/tcp: null
 ports_description:
   25565/tcp: "Minecraft Server Port"
-  25575/tcp: "RCON Port (For external RCON clients)"
+  25575/tcp: "RCON Port (optional external exposure)"
 options:
   accept_eula: false
   server_version: "latest"
+  auto_update: true
   memory_min: "2G"
   memory_max: "4G"
   motd: "A Minecraft Server powered by Home Assistant"
+  online_mode: true
+  enforce_whitelist: false
+  max_players: 20
+  expose_rcon: false
   rcon_password: "ChangeMePlease"
 schema:
   accept_eula: bool
   server_version: str
+  auto_update: bool
   memory_min: str
   memory_max: str
   motd: str
+  online_mode: bool
+  enforce_whitelist: bool
+  max_players: int
+  expose_rcon: bool
   rcon_password: password

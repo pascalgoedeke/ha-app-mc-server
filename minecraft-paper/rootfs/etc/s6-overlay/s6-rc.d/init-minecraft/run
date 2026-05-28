@@ -13,36 +13,64 @@ mkdir -p "${WORKDIR}"
 cd "${WORKDIR}" || exit 1
 
 SERVER_VERSION=$(bashio::config 'server_version')
+AUTO_UPDATE=$(bashio::config 'auto_update')
+RCON_EXPOSE=$(bashio::config 'expose_rcon')
 
-# Dynamically resolve latest server version if requested
-if [ "${SERVER_VERSION}" = "latest" ]; then
-    bashio::log.info "Requesting latest PaperMC version..."
-    SERVER_VERSION=$(curl -s "https://api.papermc.io/v2/projects/paper" | jq -r '.versions[-1]')
-    bashio::log.info "Resolved to: ${SERVER_VERSION}"
-fi
+fetch_json() {
+    local url="$1"
+    curl -fsSL --retry 3 --retry-delay 2 "${url}"
+}
 
-# Fetch the absolute latest build number for the specified version 
-LATEST_BUILD=$(curl -s "https://api.papermc.io/v2/projects/paper/versions/${SERVER_VERSION}" | jq -r '.builds[-1]')
-
-if [ "${LATEST_BUILD}" = "null" ]; then
-    bashio::log.fatal "Could not find a valid build for Minecraft version ${SERVER_VERSION}."
+# Ensure persistent data directory is writable by the runtime user.
+# This is required so Java can run as non-root.
+if ! chown -R minecraft:minecraft "${WORKDIR}"; then
+    bashio::log.fatal "Failed to set ownership on ${WORKDIR} for user minecraft."
     exit 1
 fi
 
-JAR_NAME="paper-${SERVER_VERSION}-${LATEST_BUILD}.jar"
-JAR_PATH="${WORKDIR}/${JAR_NAME}"
+# If updates are disabled and a valid existing paper.jar exists, reuse it.
+if ! bashio::var.true "${AUTO_UPDATE}" && [ -L "${WORKDIR}/paper.jar" ] && [ -f "$(readlink -f "${WORKDIR}/paper.jar")" ]; then
+    JAR_PATH="$(readlink -f "${WORKDIR}/paper.jar")"
+    JAR_NAME="$(basename "${JAR_PATH}")"
+    bashio::log.info "Auto update disabled, reusing existing Paper jar: ${JAR_NAME}"
+else
+    # Dynamically resolve latest server version if requested
+    if [ "${SERVER_VERSION}" = "latest" ]; then
+        bashio::log.info "Requesting latest PaperMC version..."
+        SERVER_VERSION=$(fetch_json "https://api.papermc.io/v2/projects/paper" | jq -er '.versions[-1]')
+        bashio::log.info "Resolved to: ${SERVER_VERSION}"
+    fi
 
-# Download only if the specific build doesn't exist
-if [ ! -f "${JAR_PATH}" ]; then
-    bashio::log.info "Downloading PaperMC ${JAR_NAME}..."
-    curl -sS -o "${JAR_PATH}" "https://api.papermc.io/v2/projects/paper/versions/${SERVER_VERSION}/builds/${LATEST_BUILD}/downloads/${JAR_NAME}"
-    
-    bashio::log.info "Cleaning up older Paper JARs to save persistent storage space..."
-    find "${WORKDIR}" -maxdepth 1 -name "paper-*.jar" -type f -not -name "${JAR_NAME}" -delete
+    # Fetch the absolute latest build number for the specified version
+    LATEST_BUILD=$(fetch_json "https://api.papermc.io/v2/projects/paper/versions/${SERVER_VERSION}" | jq -er '.builds[-1]')
+
+    if [ "${LATEST_BUILD}" = "null" ]; then
+        bashio::log.fatal "Could not find a valid build for Minecraft version ${SERVER_VERSION}."
+        exit 1
+    fi
+
+    JAR_NAME="paper-${SERVER_VERSION}-${LATEST_BUILD}.jar"
+    JAR_PATH="${WORKDIR}/${JAR_NAME}"
+
+    if [ -f "${WORKDIR}/paper.jar" ]; then
+        CURRENT_JAR="$(basename "$(readlink -f "${WORKDIR}/paper.jar" 2>/dev/null || true)")"
+        if [ "${CURRENT_JAR}" = "${JAR_NAME}" ] && [ -f "${JAR_PATH}" ]; then
+            bashio::log.info "PaperMC ${JAR_NAME} is already installed."
+        fi
+    fi
+
+    # Download if the latest resolved jar is not present
+    if [ ! -f "${JAR_PATH}" ]; then
+        bashio::log.info "Downloading PaperMC ${JAR_NAME}..."
+        fetch_json "https://api.papermc.io/v2/projects/paper/versions/${SERVER_VERSION}/builds/${LATEST_BUILD}/downloads/${JAR_NAME}" > "${JAR_PATH}"
+
+        bashio::log.info "Cleaning up older Paper JARs to save persistent storage space..."
+        find "${WORKDIR}" -maxdepth 1 -name "paper-*.jar" -type f -not -name "${JAR_NAME}" -delete
+    fi
+
+    # Symlink the actual jar to paper.jar for the run script
+    ln -sf "${JAR_PATH}" "${WORKDIR}/paper.jar"
 fi
-
-# Symlink the actual jar to paper.jar for the run script
-ln -sf "${JAR_PATH}" "${WORKDIR}/paper.jar"
 
 # Write EULA acceptance physically to disk
 echo "eula=true" > "${WORKDIR}/eula.txt"
@@ -63,13 +91,32 @@ set_property() {
 
 MOTD=$(bashio::config 'motd')
 RCON_PASSWORD=$(bashio::config 'rcon_password')
+ONLINE_MODE=$(bashio::config 'online_mode')
+ENFORCE_WHITELIST=$(bashio::config 'enforce_whitelist')
+MAX_PLAYERS=$(bashio::config 'max_players')
 
 bashio::log.info "Updating server.properties with add-on configuration..."
 set_property "enable-rcon" "true"
 set_property "rcon.password" "${RCON_PASSWORD}"
 set_property "rcon.port" "25575"
+if bashio::var.true "${RCON_EXPOSE}"; then
+    set_property "rcon.ip" "0.0.0.0"
+else
+    set_property "rcon.ip" "127.0.0.1"
+fi
 set_property "server-port" "25565"
 set_property "motd" "${MOTD}"
+set_property "online-mode" "${ONLINE_MODE}"
+set_property "white-list" "${ENFORCE_WHITELIST}"
+set_property "max-players" "${MAX_PLAYERS}"
+
+if [ "${RCON_PASSWORD}" = "ChangeMePlease" ] || [ "${#RCON_PASSWORD}" -lt 12 ]; then
+    if bashio::var.true "${RCON_EXPOSE}"; then
+        bashio::log.fatal "Refusing to expose RCON with a weak password. Use a unique password with at least 12 characters."
+        exit 1
+    fi
+    bashio::log.warning "RCON password is weak. Set a unique password with at least 12 characters for production use."
+fi
 
 # Create RCON CLI configuration for internal usage by our shutdown script
 mkdir -p /etc/rcon
