@@ -96,6 +96,7 @@ MAX_PLAYERS=$(bashio::config 'max_players')
 MIN_RCON_PASSWORD_LENGTH=12
 AUTO_GENERATE_RCON_PASSWORD_MARKER="__AUTO_GENERATE__"
 
+# Treat empty values like the auto-generate marker to support existing installs that never set rcon_password.
 if [ "${RCON_PASSWORD}" = "${AUTO_GENERATE_RCON_PASSWORD_MARKER}" ] || [ -z "${RCON_PASSWORD}" ]; then
     if bashio::var.true "${RCON_EXPOSE}"; then
         bashio::log.fatal "RCON is exposed, but no explicit password is configured. Set a unique password with at least ${MIN_RCON_PASSWORD_LENGTH} characters."

@@ -45,7 +45,7 @@ First, set up the YAML integration in your base `configuration.yaml` in HA:
 rcon:
   - host: localhost
     port: 25575
-    password: "your-unique-rcon-password"
+    password: "YOUR_STRONG_RCON_PASSWORD_12CHARS_MIN"
 ```
 
 Restart Home Assistant. You can now call a service from any Automation in your house!
