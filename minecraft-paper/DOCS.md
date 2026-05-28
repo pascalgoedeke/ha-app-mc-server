@@ -64,4 +64,6 @@ action:
 
 ## Data Persistence & Backup
 
+> **Upgrade note:** This add-on uses the `homeassistant_config` mapping (instead of the deprecated `config` mapping) to stay compatible with current Home Assistant add-on requirements.
+
 All worlds, plugins, and properties are safely isolated inside `/data`. This makes it fully compatible with Home Assistant's built-in full and partial backup systems.

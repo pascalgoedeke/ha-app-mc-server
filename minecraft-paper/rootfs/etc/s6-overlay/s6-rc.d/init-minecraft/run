@@ -84,6 +84,10 @@ set_property() {
     fi
 }
 
+generate_rcon_password() {
+    tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 32
+}
+
 MOTD=$(bashio::config 'motd')
 RCON_PASSWORD=$(bashio::config 'rcon_password')
 ONLINE_MODE=$(bashio::config 'online_mode')
@@ -97,7 +101,7 @@ if [ "${RCON_PASSWORD}" = "${AUTO_GENERATE_RCON_PASSWORD_MARKER}" ] || [ -z "${R
         bashio::log.fatal "RCON is exposed, but no explicit password is configured. Set a unique password with at least ${MIN_RCON_PASSWORD_LENGTH} characters."
         exit 1
     fi
-    RCON_PASSWORD="$(tr -d '-' < /proc/sys/kernel/random/uuid)"
+    RCON_PASSWORD="$(generate_rcon_password)"
     bashio::log.info "Generated a random internal RCON password because none was explicitly configured."
 fi
 
