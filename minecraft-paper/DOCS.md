@@ -19,7 +19,9 @@ A stable and production-ready Minecraft Paper Server optimized for Home Assistan
 
 - The Java server runs as a non-root user by default.
 - Keep `online_mode: true` for public servers.
-- Use a long, unique `rcon_password` (at least 12 chars). If `expose_rcon` is enabled with a weak password, startup is blocked.
+- If `rcon_password` is left at the default `__AUTO_GENERATE__`, the add-on generates a random internal password on startup.
+- Use a long, unique `rcon_password` (at least 12 chars) whenever you need external RCON access.
+- If `expose_rcon` is enabled without an explicit strong password, startup is blocked.
 - External RCON is disabled by default. To expose it, set `expose_rcon: true` and map port `25575`.
 
 ## Home Assistant Integration
@@ -42,7 +44,7 @@ First, set up the YAML integration in your base `configuration.yaml` in HA:
 rcon:
   - host: localhost
     port: 25575
-    password: "ChangeMePlease"
+    password: "your-unique-rcon-password"
 ```
 
 Restart Home Assistant. You can now call a service from any Automation in your house!

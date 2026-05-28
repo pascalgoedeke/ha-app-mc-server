@@ -1,4 +1,5 @@
 ARG BUILD_FROM=ghcr.io/hassio-addons/base:20.0.1
+# hadolint ignore=DL3006
 FROM $BUILD_FROM
 
 # Set shell
@@ -7,6 +8,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ARG BUILD_ARCH
 
 # Install Java 21, curl, jq and download rcon-cli mapping arm64/amd64 correctly
+# hadolint ignore=DL3018
 RUN \
     echo "Installing dependencies..." \
     && apk add --no-cache \
@@ -35,8 +37,10 @@ COPY rootfs /
 # Ensure scripts are executable (critical for Windows environments)
 RUN chmod a+x /etc/s6-overlay/s6-rc.d/*/up \
     && chmod a+x /etc/s6-overlay/s6-rc.d/*/run \
+    && [ -f /etc/s6-overlay/s6-rc.d/init-minecraft/up ] \
     && chmod a+x /etc/s6-overlay/s6-rc.d/init-minecraft/up \
-    && chmod a+x /etc/s6-overlay/s6-rc.d/minecraft/run || true
+    && [ -f /etc/s6-overlay/s6-rc.d/minecraft/run ] \
+    && chmod a+x /etc/s6-overlay/s6-rc.d/minecraft/run
 
 # Set the working directory where our persistent data will mount
 WORKDIR /data
