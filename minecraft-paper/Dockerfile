@@ -37,10 +37,8 @@ COPY rootfs /
 # Ensure scripts are executable (critical for Windows environments)
 RUN chmod a+x /etc/s6-overlay/s6-rc.d/*/up \
     && chmod a+x /etc/s6-overlay/s6-rc.d/*/run \
-    && [ -f /etc/s6-overlay/s6-rc.d/init-minecraft/up ] \
-    && chmod a+x /etc/s6-overlay/s6-rc.d/init-minecraft/up \
-    && [ -f /etc/s6-overlay/s6-rc.d/minecraft/run ] \
-    && chmod a+x /etc/s6-overlay/s6-rc.d/minecraft/run
+    && if [ -f /etc/s6-overlay/s6-rc.d/init-minecraft/up ]; then chmod a+x /etc/s6-overlay/s6-rc.d/init-minecraft/up; fi \
+    && if [ -f /etc/s6-overlay/s6-rc.d/minecraft/run ]; then chmod a+x /etc/s6-overlay/s6-rc.d/minecraft/run; fi
 
 # Set the working directory where our persistent data will mount
 WORKDIR /data
