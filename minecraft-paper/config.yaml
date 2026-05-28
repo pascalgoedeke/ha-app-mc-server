@@ -19,7 +19,7 @@ ports:
   25575/tcp: null
 ports_description:
   25565/tcp: "Minecraft Server Port"
-  25575/tcp: "RCON Port (optional external exposure)"
+  25575/tcp: "RCON Port (disabled by default; enable by mapping port and setting expose_rcon)"
 options:
   accept_eula: false
   server_version: "latest"

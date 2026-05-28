@@ -52,13 +52,6 @@ else
     JAR_NAME="paper-${SERVER_VERSION}-${LATEST_BUILD}.jar"
     JAR_PATH="${WORKDIR}/${JAR_NAME}"
 
-    if [ -f "${WORKDIR}/paper.jar" ]; then
-        CURRENT_JAR="$(basename "$(readlink -f "${WORKDIR}/paper.jar" 2>/dev/null || true)")"
-        if [ "${CURRENT_JAR}" = "${JAR_NAME}" ] && [ -f "${JAR_PATH}" ]; then
-            bashio::log.info "PaperMC ${JAR_NAME} is already installed."
-        fi
-    fi
-
     # Download if the latest resolved jar is not present
     if [ ! -f "${JAR_PATH}" ]; then
         bashio::log.info "Downloading PaperMC ${JAR_NAME}..."
@@ -66,6 +59,8 @@ else
 
         bashio::log.info "Cleaning up older Paper JARs to save persistent storage space..."
         find "${WORKDIR}" -maxdepth 1 -name "paper-*.jar" -type f -not -name "${JAR_NAME}" -delete
+    else
+        bashio::log.info "PaperMC ${JAR_NAME} is already installed."
     fi
 
     # Symlink the actual jar to paper.jar for the run script
@@ -110,7 +105,18 @@ set_property "online-mode" "${ONLINE_MODE}"
 set_property "white-list" "${ENFORCE_WHITELIST}"
 set_property "max-players" "${MAX_PLAYERS}"
 
-if [ "${RCON_PASSWORD}" = "ChangeMePlease" ] || [ "${#RCON_PASSWORD}" -lt 12 ]; then
+RCON_PASSWORD_LOWER="${RCON_PASSWORD,,}"
+WEAK_RCON_PASSWORD="false"
+if [ "${#RCON_PASSWORD}" -lt 12 ]; then
+    WEAK_RCON_PASSWORD="true"
+fi
+case "${RCON_PASSWORD_LOWER}" in
+    changemeplease|password|minecraft|admin|123456|12345678|qwerty)
+        WEAK_RCON_PASSWORD="true"
+        ;;
+esac
+
+if bashio::var.true "${WEAK_RCON_PASSWORD}"; then
     if bashio::var.true "${RCON_EXPOSE}"; then
         bashio::log.fatal "Refusing to expose RCON with a weak password. Use a unique password with at least 12 characters."
         exit 1
