@@ -84,11 +84,35 @@ set_property() {
     fi
 }
 
+generate_rcon_password() {
+    tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 32
+}
+
 MOTD=$(bashio::config 'motd')
 RCON_PASSWORD=$(bashio::config 'rcon_password')
 ONLINE_MODE=$(bashio::config 'online_mode')
 ENFORCE_WHITELIST=$(bashio::config 'enforce_whitelist')
 MAX_PLAYERS=$(bashio::config 'max_players')
+MIN_RCON_PASSWORD_LENGTH=12
+AUTO_GENERATE_RCON_PASSWORD_MARKER="__AUTO_GENERATE__"
+
+# Treat empty values like the auto-generate marker to support existing installs that never set rcon_password.
+if [ "${RCON_PASSWORD}" = "${AUTO_GENERATE_RCON_PASSWORD_MARKER}" ] || [ -z "${RCON_PASSWORD}" ]; then
+    if bashio::var.true "${RCON_EXPOSE}"; then
+        bashio::log.fatal "RCON is exposed, but no explicit password is configured. Set a unique password with at least ${MIN_RCON_PASSWORD_LENGTH} characters."
+        exit 1
+    fi
+    RCON_PASSWORD="$(generate_rcon_password)"
+    bashio::log.info "Generated a random internal RCON password because none was explicitly configured."
+fi
+
+if [ "${#RCON_PASSWORD}" -lt "${MIN_RCON_PASSWORD_LENGTH}" ]; then
+    if bashio::var.true "${RCON_EXPOSE}"; then
+        bashio::log.fatal "Refusing to expose RCON with a weak password. Use a unique password with at least ${MIN_RCON_PASSWORD_LENGTH} characters."
+        exit 1
+    fi
+    bashio::log.warning "RCON password is shorter than ${MIN_RCON_PASSWORD_LENGTH} characters. Set a stronger password for production use."
+fi
 
 bashio::log.info "Updating server.properties with add-on configuration..."
 set_property "enable-rcon" "true"
@@ -104,25 +128,6 @@ set_property "motd" "${MOTD}"
 set_property "online-mode" "${ONLINE_MODE}"
 set_property "white-list" "${ENFORCE_WHITELIST}"
 set_property "max-players" "${MAX_PLAYERS}"
-
-RCON_PASSWORD_LOWER="${RCON_PASSWORD,,}"
-WEAK_RCON_PASSWORD="false"
-if [ "${#RCON_PASSWORD}" -lt 12 ]; then
-    WEAK_RCON_PASSWORD="true"
-fi
-case "${RCON_PASSWORD_LOWER}" in
-    changemeplease|password|minecraft|admin|123456|12345678|qwerty)
-        WEAK_RCON_PASSWORD="true"
-        ;;
-esac
-
-if bashio::var.true "${WEAK_RCON_PASSWORD}"; then
-    if bashio::var.true "${RCON_EXPOSE}"; then
-        bashio::log.fatal "Refusing to expose RCON with a weak password. Use a unique password with at least 12 characters."
-        exit 1
-    fi
-    bashio::log.warning "RCON password is weak. Set a unique password with at least 12 characters for production use."
-fi
 
 # Create RCON CLI configuration for internal usage by our shutdown script
 mkdir -p /etc/rcon

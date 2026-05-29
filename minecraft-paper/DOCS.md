@@ -19,7 +19,9 @@ A stable and production-ready Minecraft Paper Server optimized for Home Assistan
 
 - The Java server runs as a non-root user by default.
 - Keep `online_mode: true` for public servers.
-- Use a long, unique `rcon_password` (at least 12 chars). If `expose_rcon` is enabled with a weak password, startup is blocked.
+- If `rcon_password` is left at the default `__AUTO_GENERATE__`, the add-on generates a random internal password on startup.
+- Use a long, unique `rcon_password` (at least 12 chars) whenever you need external RCON access.
+- If `expose_rcon` is enabled without an explicit strong password, startup is blocked.
 - External RCON is disabled by default. To expose it, set `expose_rcon: true` and map port `25575`.
 
 ## Home Assistant Integration
@@ -38,14 +40,16 @@ This add-on configures RCON for internal lifecycle management (save-all + gracef
 You can send chat messages, change the weather, or execute system console commands directly from your Automations via Home Assistant's built-in RCON integration.
 
 First, set up the YAML integration in your base `configuration.yaml` in HA:
+
 ```yaml
 rcon:
   - host: localhost
     port: 25575
-    password: "ChangeMePlease"
+    password: "MySecureP@ssw0rd2026"
 ```
 
 Restart Home Assistant. You can now call a service from any Automation in your house!
+
 ```yaml
 alias: Minecraft - Announce Arrival
 trigger:
@@ -59,4 +63,7 @@ action:
 ```
 
 ## Data Persistence & Backup
+
+> **Upgrade note:** This add-on uses the `homeassistant_config` mapping (instead of the deprecated `config` mapping) to stay compatible with current Home Assistant add-on requirements.
+
 All worlds, plugins, and properties are safely isolated inside `/data`. This makes it fully compatible with Home Assistant's built-in full and partial backup systems.
